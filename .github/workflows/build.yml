@@ -1,0 +1,86 @@
+name: twrp prebuilts - push
+
+on:
+  push:
+    branches: [ android-9.0 ]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    if: "!contains(github.event.head_commit.message, '[ci skip]')"
+
+    steps:
+      - name: Checkout kernel repo
+        uses: actions/checkout@v2
+        with:
+          ref: 'android-9.0'
+          token: ${{ secrets.TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip bsdiff tar xz-utils ccache
+
+      - name: Set up environment
+        id: toolchains
+        run: |
+          ccache -M 5G
+          rm -rf hk-out
+          mkdir -p hk-tools/aarch64-linux-gnu && cd hk-tools && pwd
+          sudo curl -L https://corsica.nu/gcc4.9 | tar -xz -C aarch64-linux-android
+          sudo wget -O /usr/lib/libisl.so.15 https://corsica.nu/libisl.so && sudo chmod +x /usr/lib/libisl.so.15
+          toolchains=$(pwd) && cd ..
+          echo ::set-output name=gcc::"$toolchains/aarch64-linux-android/bin/aarch64-linux-android-"
+
+      - name: Build everything
+        id: build
+        run: |
+          jobs=16
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export CROSS_COMPILE=${{ steps.toolchains.outputs.gcc }}
+          combo=(a5y17lte a7y17lte)
+          for variant in ${combo[@]}; do
+            rm -rf .version
+            mkdir -p hk-out/$variant
+            unset LOCALVERSION
+            make ARCH=arm64 exynos7880-"$variant"_eur_defconfig
+            make ARCH=arm64 -j$jobs
+            cp -r arch/arm64/boot/Image hk-out/$variant/kernel
+            cp -r arch/arm64/boot/dtb.img hk-out/$variant/dtb
+          done
+          
+      - name: Generate release file
+        id: files
+        run: |
+          basedir=$(pwd)
+          tag=$(date +'%Y%m%d%H%M%S')
+          date=$(date +'%d-%m-%Y')
+          cd hk-out && zip -r prebuilts.zip * && cd $basedir
+          echo ::set-output name=zip::`find -name prebuilts.zip`
+          echo ::set-output name=tag::$tag
+          echo ::set-output name=date::$date
+
+      - name: Update current version and create log
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git pull origin ${{github.ref}} --ff-only
+          git tag ${{ steps.files.outputs.tag }}
+
+      - name: Push changes to repo
+        uses: ad-m/github-push-action@master
+        with:
+          tags: true
+          github_token: ${{ secrets.TOKEN }}
+          branch: ${{github.ref}}
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        with:
+          tag_name: ${{ steps.files.outputs.tag }}
+          name: Prebuilts of ${{ steps.files.outputs.date }}
+          files: |
+            ${{ steps.files.outputs.zip }}
