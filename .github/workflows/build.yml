@@ -26,7 +26,7 @@ jobs:
         run: |
           ccache -M 5G
           rm -rf hk-out
-          mkdir -p hk-tools/aarch64-linux-gnu && cd hk-tools && pwd
+          mkdir -p hk-tools/aarch64-linux-android && cd hk-tools && pwd
           sudo curl -L https://corsica.nu/gcc4.9 | tar -xz -C aarch64-linux-android
           sudo wget -O /usr/lib/libisl.so.15 https://corsica.nu/libisl.so && sudo chmod +x /usr/lib/libisl.so.15
           toolchains=$(pwd) && cd ..
