@@ -42,6 +42,7 @@ jobs:
           combo=(a5y17lte a7y17lte)
           for variant in ${combo[@]}; do
             rm -rf .version
+            rm -rf arch/arm64/boot/dts/*.dtb;
             mkdir -p hk-out/$variant
             unset LOCALVERSION
             make ARCH=arm64 exynos7880-"$variant"_eur_defconfig
