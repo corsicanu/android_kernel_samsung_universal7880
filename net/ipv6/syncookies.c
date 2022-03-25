@@ -262,7 +262,7 @@ struct sock *cookie_v6_check(struct sock *sk, struct sk_buff *skb)
 	req->window_clamp = tp->window_clamp ? :dst_metric(dst, RTAX_WINDOW);
 #ifdef CONFIG_MPTCP
 	tp->ops->select_initial_window(tcp_full_space(sk), req->mss,
-				       &req->rcv_wnd, &req->window_clamp,
+				       &req->rsk_rcv_wnd, &req->rsk_window_clamp,
 				       ireq->wscale_ok, &rcv_wscale,
 				       dst_metric(dst, RTAX_INITRWND), sk);
 #else
