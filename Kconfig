@@ -17,3 +17,4 @@ config ANDROID_MAJOR_VERSION
 	option env="ANDROID_MAJOR_VERSION"
 
 source "arch/$SRCARCH/Kconfig"
+source "backports/Kconfig"
